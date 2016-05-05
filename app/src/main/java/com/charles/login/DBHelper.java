@@ -1,46 +1,53 @@
 package com.charles.login;
 
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
-import java.util.ArrayList;
-import java.util.List;
-/**
- * Created by charles on 16/5/1.
- */
+
 public class DBHelper extends SQLiteOpenHelper {
 
     public DBHelper(Context context) {
-        super(context, Values.DATABASE_NAME, null, 1);
+        super(context, Values.DATABASE_NAME, null, 6);
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        Log.d("onCreate", "table created");
+        db.execSQL("CREATE TABLE Items" +
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT NOT NULL, quantity INTEGER NOT NULL, done BOOLEAN)");
         db.execSQL("CREATE TABLE Users" +
-                "(email text PRIMARY KEY, password text NOT NULL, name text NOT NULL, phone text)");
+                "(email TEXT PRIMARY KEY, password TEXT NOT NULL, name TEXT NOT NULL, phone TEXT)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS Users");
+        db.execSQL("DROP TABLE IF EXISTS Items");
         onCreate(db);
     }
 
     public boolean matches(String email, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor res = db.rawQuery("SELECT * FROM Users WHERE email=? AND password=?", new String[]{email, password});
-        //debug
-        Cursor rs = getData(email);
-        String[] colName = rs.getColumnNames();
-        for(String col : colName) {
-            Log.d("register", col);
-        }
-
         return res.getCount() == 1;
+    }
+
+    public boolean insertItem(String item, int quantity, boolean done) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues content = new ContentValues();
+        //content.put(Values.ITEM_COLUMN_EMAIL, email);
+        content.put(Values.ITEM_COLUMN_ITEM_NAME, item);
+        content.put(Values.ITEM_COLUMN_QUANTITY, quantity);
+        content.put(Values.ITEM_COLUMN_DONE, done);
+        long before = db.rawQuery("SELECT * FROM Items", null).getCount();
+        long after = db.insert("Items", null, content);
+        if(after - before == 1) {
+            return true;
+        }
+        return false;
     }
 
     public boolean insert(String email, String password, String name, String phone) {
@@ -53,7 +60,7 @@ public class DBHelper extends SQLiteOpenHelper {
         long before = db.rawQuery("SELECT * FROM Users", null).getCount();
         long after = db.insert("Users", null, content);
         //debug
-        getAll();
+//        getAll();
         Log.d("num of res before", String.valueOf(before));
         Log.d("num of res after", String.valueOf(after));
 
@@ -63,21 +70,38 @@ public class DBHelper extends SQLiteOpenHelper {
         return false;
     }
 
-    public void getAll() {
-        List<Cursor> res = new ArrayList<Cursor>();
+    public Cursor getAllCompletedItems() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT * FROM Items WHERE done=1", null);
+        c.moveToFirst();
+        return c;
+    }
+
+    public Cursor getAllUncompletedItems() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT * FROM Items WHERE done=0", null);
+        c.moveToFirst();
+        return c;
+    }
+
+    public Cursor getAll() {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT * FROM Users", null);
         c.moveToFirst();
-        while(!c.isAfterLast()) {
-            Log.d("register", c.getString(c.getColumnIndex(Values.USER_COLUMN_EMAIL)));
-            c.moveToNext();
-        }
+        return c;
     }
 
     public Cursor getData(String email) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor res = db.rawQuery("SELECT * FROM Users WHERE email=?", new String[]{email});
         return res;
+    }
+
+    public void updateItem(int id, boolean done) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues content = new ContentValues();
+        content.put(Values.ITEM_COLUMN_DONE, done);
+        db.update("Items", content, "id=?", new String[]{String.valueOf(id)});
     }
 
     public void update(String email, String password, String name, String phone) {

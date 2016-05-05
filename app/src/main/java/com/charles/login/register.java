@@ -71,6 +71,7 @@ public class register extends AppCompatActivity {
                 if (emailMatcher.matches()) {
                     db.insert(email.getText().toString(), password.getText().toString(), name.getText().toString(), phone.getText().toString());
 
+
                     Intent i = new Intent(register.this, Login.class);
                     register.this.startActivity(i);
                 }
